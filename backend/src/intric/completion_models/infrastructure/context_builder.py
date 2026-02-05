@@ -354,7 +354,10 @@ class ContextBuilder:
                 message.question,
                 self._get_files_by_type(message.files, FileType.TEXT),
             )
-            answer = message.answer
+
+            # ✅ NYTT: använd redigerat svar (edited_answer) om det finns, annars original (answer)
+            answer = (getattr(message, "edited_answer", None) or message.answer)
+
             images = self._get_files_by_type(message.files, FileType.IMAGE)
             generated_images = self._get_files_by_type(
                 message.generated_files, FileType.IMAGE

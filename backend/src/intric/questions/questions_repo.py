@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 from uuid import UUID
 
 import sqlalchemy as sa
@@ -56,7 +56,6 @@ class QuestionRepository:
     def _add_options(self, stmt: sa.Select | sa.Insert | sa.Update):
         for option in self._get_options():
             stmt = stmt.options(option)
-
         return stmt
 
     async def _get_info_blob_record(self, id: str):
@@ -65,11 +64,10 @@ class QuestionRepository:
             .where(InfoBlobs.id == id)
             .options(selectinload(InfoBlobs.group))
         )
-
         return await self.session.scalar(stmt)
 
     async def _add_references(
-        self, question_id: int, chunks: list[InfoBlobChunkInDBWithScore]
+        self, question_id: UUID, chunks: list[InfoBlobChunkInDBWithScore]
     ):
         if not chunks:
             return []
@@ -93,7 +91,7 @@ class QuestionRepository:
         return (await self.session.scalars(stmt)).all()
 
     async def _add_files(
-        self, question_id: int, files: list[File], file_type: str = "user"
+        self, question_id: UUID, files: list[File], file_type: str = "user"
     ):
         stmt = sa.insert(QuestionsFiles).values(
             [
@@ -101,7 +99,6 @@ class QuestionRepository:
                 for file in files
             ]
         )
-
         await self.session.execute(stmt)
 
     async def _add_web_search_results(
@@ -120,11 +117,42 @@ class QuestionRepository:
                 for web_search_result in web_search_results
             ]
         )
-
         await self.session.execute(stmt)
 
     async def get(self, id: UUID):
         return await self.delegate.get(id)
+
+    async def set_edited_answer(
+        self,
+        *,
+        session_id: UUID,
+        question_id: UUID,
+        edited_answer: Optional[str],
+    ) -> Optional[Question]:
+        """
+        Save edited assistant answer for a question (scoped to session).
+        - If edited_answer is None/empty -> clears the edit
+        - Returns updated Question (fully loaded) or None if not found in that session
+        """
+        # Normalisera tom sträng till None
+        if edited_answer is not None and edited_answer.strip() == "":
+            edited_answer = None
+
+        stmt = (
+            sa.update(Questions)
+            .where(Questions.id == question_id)
+            .where(Questions.session_id == session_id)
+            .values(edited_answer=edited_answer)
+            .returning(Questions)
+        )
+
+        stmt = self._add_options(stmt)
+
+        updated = await self.session.scalar(stmt)
+        if updated is None:
+            return None
+
+        return await self.get(updated.id)
 
     async def add(
         self,

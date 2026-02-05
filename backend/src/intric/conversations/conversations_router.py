@@ -2,7 +2,8 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from pydantic import BaseModel
 
 from intric.assistants.api.assistant_protocol import to_conversation_response
 from intric.conversations.conversation_models import ConversationRequest
@@ -27,6 +28,10 @@ from intric.sessions.session_protocol import (
 )
 
 router = APIRouter()
+
+
+class EditedAnswerUpdate(BaseModel):
+    edited_answer: Optional[str] = None  # ✅ NYTT: redigerat svar (None = rensa)
 
 
 @router.post(
@@ -163,6 +168,47 @@ async def get_conversation(
     session = await session_service.get_session_by_uuid(session_id)
 
     return to_session_public(session)
+
+
+@router.patch(
+    "/{session_id}/questions/{question_id}/edited-answer/",
+    response_model=SessionPublic,
+    responses=responses.get_responses([400, 404]),
+)
+async def update_edited_answer(
+    payload: EditedAnswerUpdate,
+    session_id: UUID = Path(..., description="The UUID of the conversation/session"),
+    question_id: UUID = Path(..., description="The UUID of the question to update"),
+    container: Container = Depends(get_container(with_user=True)),
+    db_session: AsyncSession = Depends(get_session_with_transaction),
+):
+    """
+    ✅ NYTT: Save an edited assistant answer so follow-up questions use the edited content.
+    Returns the updated conversation (session).
+    """
+    # 1) Validate session access (permission check happens in service)
+    session_service = container.session_service()
+    session = await session_service.get_session_by_uuid(session_id)
+
+    # 2) Ensure question belongs to this session
+    if not any(q.id == question_id for q in session.questions):
+        raise HTTPException(status_code=404, detail="Question not found in session")
+
+    # 3) Persist edited_answer (✅ FIX: scope update to session_id)
+    question_repo = container.question_repo()
+    updated_question = await question_repo.set_edited_answer(
+        session_id=session_id,
+        question_id=question_id,
+        edited_answer=payload.edited_answer,
+    )
+
+    if updated_question is None:
+        # If the update didn't hit anything in this session, treat as not found
+        raise HTTPException(status_code=404, detail="Question not found in session")
+
+    # 4) Return refreshed session
+    updated_session = await session_service.get_session_by_uuid(session_id)
+    return to_session_public(updated_session)
 
 
 @router.delete(

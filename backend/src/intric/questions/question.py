@@ -56,6 +56,7 @@ class WebSearchResultPublic(BaseModel):
 class QuestionBase(BaseModel):
     question: str
     answer: str
+    edited_answer: Optional[str] = None  # ✅ NYTT: redigerat svar (persistat i DB)
 
 
 class QuestionAdd(QuestionBase):

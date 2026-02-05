@@ -2,6 +2,8 @@
   import { IconCopy } from "@intric/icons/copy";
   import { IconChevronRight } from "@intric/icons/chevron-right";
   import { Button, Tooltip } from "@intric/ui";
+  import { createEventDispatcher } from "svelte";
+  import { IconEdit } from "@intric/icons/edit"; // penna-ikon
   import BlobPreview from "$lib/features/knowledge/components/BlobPreview.svelte";
   import LinkReference from "$lib/features/knowledge/components/LinkReference.svelte";
   import { getFaviconUrlService } from "$lib/features/knowledge/FaviconUrlService.svelte";
@@ -9,6 +11,9 @@
 
   const { current, isLast } = getMessageContext();
   const message = $derived(current());
+
+    // Dispatcher används för att bubbla upp att användaren vill redigera svaret
+  const dispatch = createEventDispatcher<{ edit: void }>();
 
   let referencesExpanded = $state(false);
   let showCopiedMessage = $state(false);
@@ -42,6 +47,22 @@
       </Button>
     </Tooltip>
 
+    <!-- NYTT: Redigera-knapp, samma stil som kopiera, men penna-ikon -->
+    <Tooltip text="Edit response">
+      <!-- texten kan vi senare byta till en översatt sträng om teamet vill -->
+      <Button
+        on:click={() => {
+          // Skicka ett event uppåt så att Message-komponenten kan sätta redigeringsläge
+          dispatch("edit");
+        }}
+        unstyled
+        class="border-default hover:bg-hover-stronger flex gap-2 rounded-lg border p-1.5 shadow-sm"
+        padding="icon"
+      >
+        <IconEdit />
+      </Button>
+    </Tooltip>
+
     {#if message.references.length > 0 || message.web_search_references.length > 0}
       <Button
         unstyled
@@ -58,6 +79,7 @@
       </Button>
     {/if}
   </div>
+  
   {#if referencesExpanded}
     <div class="mb-2 flex w-full flex-wrap gap-2 pt-2 md:pb-6">
       {#each message.references as reference, index (reference.id)}

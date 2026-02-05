@@ -37,3 +37,7 @@ install-claude.sh
 devcontainer.json
 specs/
 .serena/
+
+# Local nested repo / generated content (do not commit)
+eneo/
+static/

@@ -2,6 +2,7 @@ import uvicorn
 from fastapi import Depends, FastAPI
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel  # används för request/response-modeller
 
 from intric.allowed_origins.get_origin_callback import get_origin
 from intric.authentication import auth_dependencies
@@ -14,6 +15,7 @@ from intric.server.middleware.cors import CORSMiddleware
 from intric.server.middleware.request_context import RequestContextMiddleware
 from intric.server.models.api import VersionResponse
 from intric.server.routers import router as api_router
+
 
 logger = get_logger(__name__)
 
@@ -161,6 +163,20 @@ def get_application():
     async def get_version():
         return VersionResponse(version=get_settings().app_version)
 
+    # --- Enkel widget-chat-endpoint (för din widget-app) ---
+    class WidgetChatRequest(BaseModel):
+        question: str
+
+    class WidgetChatResponse(BaseModel):
+        reply: str
+
+    @app.post("/api/widget/chat", response_model=WidgetChatResponse)
+    async def widget_chat(body: WidgetChatRequest):
+        # Här kan vi senare koppla in riktig AI + databas.
+        # Just nu: enkel demo som visar att allt funkar.
+        answer = f"Du frågade: '{body.question}'. Det här är ett test-svar från /api/widget/chat."
+        return WidgetChatResponse(reply=answer)
+
     return app
 
 
@@ -175,3 +191,4 @@ def start():
         reload=True,
         reload_dirs="./src/",
     )
+

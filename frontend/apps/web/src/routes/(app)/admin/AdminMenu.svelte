@@ -11,10 +11,10 @@
   import { IconLibrary } from "@intric/icons/library";
   import { IconCPU } from "@intric/icons/CPU";
   import { IconBulb } from "@intric/icons/bulb";
+  import { IconKey } from "@intric/icons/key";
+
   import { page } from "$app/stores";
   import { Navigation } from "$lib/components/layout";
-  import { ChartPie, LayoutTemplate } from "lucide-svelte";
-  import { IconKey } from "@intric/icons/key";
   import { m } from "$lib/paraglide/messages";
   import { getAppContext } from "$lib/core/AppContext.js";
 
@@ -32,6 +32,7 @@
 </script>
 
 <Navigation.Menu>
+  <!-- Organisation -->
   <Navigation.Link
     href="/admin"
     isActive={isSelected("/admin", currentRoute)}
@@ -40,33 +41,48 @@
   />
 
   <div class="border-default my-2 border-b-[0.5px]"></div>
+
+  <!-- Models / Templates / Widget generator -->
   <Navigation.Link
     href="/admin/models"
     isActive={isSelected("/admin/models", currentRoute)}
     icon={IconCPU}
     label={m.models()}
   />
+
   {#if settings?.using_templates}
     <Navigation.Link
       href="/admin/templates"
       isActive={isSelected("/admin/templates", currentRoute)}
-      icon={LayoutTemplate}
+      icon={IconLibrary}
       label={m.templates()}
     />
   {/if}
+
+  <Navigation.Link
+    href="/admin/widget-generator"
+    isActive={isSelected("/admin/widget-generator", currentRoute)}
+    icon={IconLibrary}
+    label="Widget generator"
+  />
+
   <Navigation.Link
     href="/admin/security-classifications"
     isActive={isSelected("/admin/security-classifications", currentRoute)}
     icon={IconKey}
     label={m.security()}
   />
+
   <div class="border-default my-2 border-b-[0.5px]"></div>
+
+  <!-- Usage / Insights -->
   <Navigation.Link
     href="/admin/usage"
     isActive={isSelected("/admin/usage", currentRoute)}
-    icon={ChartPie}
+    icon={IconLibrary}
     label={m.usage()}
   />
+
   <Navigation.Link
     href="/admin/insights"
     isActive={isSelected("/admin/insights", currentRoute)}
@@ -75,22 +91,28 @@
   >
     <span
       class="hidden rounded-md border border-[var(--beta-indicator)] px-1 py-0.5 text-xs font-normal !tracking-normal text-[var(--beta-indicator)] md:block"
-      >{m.beta()}</span
     >
+      {m.beta()}
+    </span>
   </Navigation.Link>
+
   <div class="border-default my-2 border-b-[0.5px]"></div>
+
+  <!-- Users / Roles -->
   <Navigation.Link
     href="/admin/users"
     isActive={isSelected("/admin/users", currentRoute)}
     icon={IconAssistant}
     label={m.users()}
   />
+
   <Navigation.Link
     href="/admin/legacy/user-groups"
     isActive={isSelected("/admin/legacy/user-groups", currentRoute)}
     icon={IconAssistants}
     label={m.user_groups()}
   />
+
   <Navigation.Link
     href="/admin/legacy/roles"
     isActive={isSelected("/admin/legacy/roles", currentRoute)}

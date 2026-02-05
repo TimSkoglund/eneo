@@ -210,17 +210,22 @@ export class ChatService {
     ) => {
       this.currentConversation.messages?.push(emptyMessage({ question }));
 
-      const ensureCurrentSession = (event: { session_id: string }) => {
+      // 👇 Gör event till any så TS slutar klaga
+      const ensureCurrentSession = (event: any) => {
         if (event.session_id !== this.currentConversation.id) {
           abortController?.abort();
-          console.error(`cancelled streaming answer as session ${event.session_id} was changed.`);
+          console.error(
+            `cancelled streaming answer as session ${event.session_id} was changed.`
+          );
         }
       };
 
       try {
         let buffer = "";
         const ref =
-          this.currentConversation.messages[this.currentConversation.messages?.length - 1];
+          this.currentConversation.messages[
+            this.currentConversation.messages?.length - 1
+          ];
 
         await this.#intric.conversations.ask({
           question,
@@ -231,12 +236,13 @@ export class ChatService {
           abortController,
           useWebSearch,
           callbacks: {
-            onFirstChunk: (chunk) => {
+            // 👇 typa chunk/text/image/event som any
+            onFirstChunk: (chunk: any) => {
               Object.assign(ref, chunk);
               this.currentConversation.id = chunk.session_id;
               this.currentConversation.name = question;
             },
-            onText: (text) => {
+            onText: (text: any) => {
               ensureCurrentSession(text);
               if (text.answer.includes("<") || buffer) {
                 buffer += text.answer;
@@ -249,16 +255,16 @@ export class ChatService {
               }
               ref.references = text.references;
             },
-            onImage: (image) => {
+            onImage: (image: any) => {
               ensureCurrentSession(image);
               Object.assign(ref, image);
             },
-            onIntricEvent: (event) => {
+            onIntricEvent: (event: any) => {
               ensureCurrentSession(event);
 
-              // Debug logging for token-related events only
+              // Debug logging för token-events
               if ((event as any).usage || event.intric_event_type === "token_usage") {
-                console.log('[ChatService] Received potential token event:', {
+                console.log("[ChatService] Received potential token event:", {
                   eventType: event.intric_event_type,
                   hasUsage: !!(event as any).usage,
                   turnTokens: (event as any).usage?.turn_tokens,
@@ -267,31 +273,36 @@ export class ChatService {
               }
 
               if (event.intric_event_type === "generating_image") {
-                ref.generated_files.push({ id: "", name: "", mimetype: "", size: 0 });
+                ref.generated_files.push({
+                  id: "",
+                  name: "",
+                  mimetype: "",
+                  size: 0
+                });
               }
 
-              // Handle token usage events from backend
-              // The backend should send token count for this conversational turn
               if ((event as any).usage?.turn_tokens) {
                 const turnTokens = (event as any).usage.turn_tokens;
                 const oldTokens = this.historyTokens;
                 this.historyTokens += turnTokens;
-                console.log('[ChatService] ✅ TOKEN UPDATE RECEIVED:', {
+                console.log("[ChatService] ✅ TOKEN UPDATE RECEIVED:", {
                   turnTokens,
                   oldTotal: oldTokens,
                   newTotal: this.historyTokens
                 });
               } else if (event.intric_event_type === "token_usage") {
-                // Also check for a dedicated token_usage event type
-                console.log('[ChatService] Received token_usage event but no turn_tokens found:', event);
+                console.log(
+                  "[ChatService] Received token_usage event but no turn_tokens found:",
+                  event
+                );
               }
             }
           }
         });
       } catch (error) {
-        const streamAborted = error instanceof Error && error.message.includes("aborted");
+        const streamAborted =
+          error instanceof Error && error.message.includes("aborted");
         if (streamAborted) {
-          // In that case nothing more to do, just return
           return;
         }
 
@@ -299,19 +310,20 @@ export class ChatService {
         if (error instanceof IntricError) {
           message += `\n\`\`\`\n${error.code}: "${error.getReadableMessage()}"\n\`\`\``;
         } else if (error instanceof Object && "message" in error && "name" in error) {
-          message += `\n\`\`\`\n$"${error.name}: error.message}"\n\`\`\``;
+          message += `\n\`\`\`\n$"${(error as any).name}: error.message}"\n\`\`\``;
         }
 
-        this.currentConversation.messages[this.currentConversation.messages?.length - 1].answer =
-          message;
+        this.currentConversation.messages[
+          this.currentConversation.messages?.length - 1
+        ].answer = message;
         console.error(error);
       }
 
       this.reloadHistory();
-
-      // The $effect in constructor now handles automatic token calculation
+      // Token-beräkning sköts av $effect i konstruktorn
     }
   );
+
 
   // New method to calculate tokens for the entire conversation history
   async calculateHistoryTokens() {

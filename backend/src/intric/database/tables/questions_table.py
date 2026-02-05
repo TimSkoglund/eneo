@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID
 
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, Text  # ✅ ÄNDRING: lade till Text
 from sqlalchemy.ext.associationproxy import AssociationProxy, association_proxy
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -22,6 +22,9 @@ if TYPE_CHECKING:
 class Questions(BasePublic):
     question: Mapped[str] = mapped_column()
     answer: Mapped[str] = mapped_column()
+    edited_answer: Mapped[Optional[str]] = mapped_column(  # ✅ ÄNDRING: ny kolumn för redigerat svar
+        Text, nullable=True
+    )
     num_tokens_question: Mapped[int] = mapped_column()
     num_tokens_answer: Mapped[int] = mapped_column()
 

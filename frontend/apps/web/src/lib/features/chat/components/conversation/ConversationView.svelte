@@ -36,6 +36,57 @@
     }
   };
 
+  // ✅ Reask = skicka NY fråga, låt gamla Q/A ligga kvar
+  const handleReask = (event: CustomEvent<{ question: string }>) => {
+    const { question } = event.detail;
+
+    if (!question?.trim()) return;
+    if (chat.askQuestion.isLoading) return;
+
+    const abortController = new AbortController();
+
+    // Skicka den redigerade frågan som en NY prompt
+    chat.askQuestion(question, [], undefined, false, abortController);
+
+    scrollToBottom();
+  };
+
+  // ✅ NYTT: Spara redigerat svar i backend så nästa fråga använder edited_answer i kontexten
+  const handleSaveEditedAnswer = async (
+    event: CustomEvent<{ questionId: string; editedAnswer: string | null }>
+  ) => {
+    const sessionId = chat.currentConversation?.id;
+    if (!sessionId) return;
+
+    const { questionId, editedAnswer } = event.detail;
+
+    // Backend-endpointen:
+    // /conversations/{session_id}/questions/{question_id}/edited-answer/
+    //
+    // OBS: Om er API är prefixad (t.ex. /api/...), lägg bara på prefix här.
+    const url = `/conversations/${sessionId}/questions/${questionId}/edited-answer/`;
+
+    try {
+      const res = await fetch(url, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          edited_answer: editedAnswer
+        })
+      });
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        console.error("Failed to save edited answer", res.status, text);
+      }
+    } catch (err) {
+      console.error("Failed to save edited answer", err);
+    }
+  };
+
   const handleScroll = () => {
     if (!browser) return;
     const bottomThreshold = 150; // px from bottom to still consider it "at bottom"
@@ -81,7 +132,9 @@
           {message}
           isLast={idx === chat.currentConversation.messages.length - 1}
           isLoading={chat.askQuestion.isLoading}
-        ></Message>
+          on:reask={handleReask}
+          on:saveEditedAnswer={handleSaveEditedAnswer}
+        />
       {/each}
     </div>
   {:else if children}
@@ -93,10 +146,11 @@
       <div class="text-primary max-h-[80%] max-w-[50ch] overflow-x-auto">
         <Markdown
           class="flex flex-col items-center justify-center gap-4 *:m-0 [&_p]:text-center"
-          source={"description" in chat.partner && chat.partner.description
-            ? chat.partner.description
-            : m.assistant_placeholder({ name: chat.partner?.name ?? "" })}
-        ></Markdown>
+            source={chat.partner && "description" in chat.partner && chat.partner.description
+              ? chat.partner.description
+              : m.assistant_placeholder({ name: chat.partner?.name ?? "" })}
+
+        />
       </div>
     </div>
   {/if}
@@ -109,13 +163,15 @@
         <Tooltip text={m.scroll_to_bottom()}>
           <button
             class="border-stronger bg-primary ring-default hover:bg-secondary flex gap-1 rounded-full border px-1.5 py-1.5 shadow-lg ring-offset-0 hover:ring-2"
-            onclick={scrollToBottom}><IconArrowDownToLine></IconArrowDownToLine></button
+            onclick={scrollToBottom}
           >
+            <IconArrowDownToLine />
+          </button>
         </Tooltip>
       </div>
     {/if}
-    <ConversationAttachments></ConversationAttachments>
-    <ConversationInput {scrollToBottom}></ConversationInput>
+    <ConversationAttachments />
+    <ConversationInput {scrollToBottom} />
   </div>
 </div>
 {#if isDragging}
