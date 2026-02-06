@@ -46,7 +46,7 @@ export function initConversations(client) {
     },
 
     /**
-     * Get info of an conversatino via its id.
+     * Get info of an conversation via its id.
      * @param  {{id: string} | Conversation} conversation conversation
      * @returns {Promise<Conversation>} Full info about the queried assistant
      * @throws {IntricError}
@@ -59,6 +59,32 @@ export function initConversations(client) {
       });
       return res;
     },
+
+         /**
+     * Rename a conversation.
+     * NOTE: This endpoint exists in backend, but the generated schema types may lag behind.
+     * We intentionally bypass type checking here to keep runtime behavior working until types are regenerated.
+     * @param  {{id: string} | Conversation} conversation conversation
+     * @param  {{name: string}} body rename payload
+     * @returns {Promise<Conversation>} Updated conversation
+     * @throws {IntricError}
+     * */
+    rename: async (conversation, body) => {
+      const { id: session_id } = conversation;
+
+      // @ts-expect-error Backend supports this endpoint; schema types may be out of date.
+      const res = await client.fetch("/api/v1/conversations/{session_id}/name/", {
+        method: "patch",
+        params: { path: { session_id } },
+        requestBody: {
+          "application/json": body
+        }
+      });
+
+      return res;
+    },
+
+
 
     /**
      * Delete a specific conversation.

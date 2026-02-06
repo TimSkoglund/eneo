@@ -46,3 +46,19 @@ class ConversationRequest(BaseModel):
                 "Either session_id, assistant_id, or group_chat_id must be provided"
             )
         return self
+
+
+class ConversationRenameRequest(BaseModel):
+    """
+    Rename a conversation (session).
+    Stored as Session.name.
+    """
+
+    name: str = Field(min_length=1, max_length=80)
+
+    @model_validator(mode="after")
+    def normalize(self) -> "ConversationRenameRequest":
+        self.name = self.name.strip()
+        if not self.name:
+            raise ValueError("name cannot be empty")
+        return self

@@ -1,4 +1,5 @@
 from logging.config import fileConfig
+import os
 
 from sqlalchemy import engine_from_config, pool
 
@@ -32,6 +33,9 @@ def run_migrations_online() -> None:
     else:
         DB_URL = get_settings().sync_database_url
 
+    # Allow overriding DB url from environment (useful outside docker network)
+    DB_URL = os.getenv("DATABASE_URL", DB_URL)
+
     configuration = config.get_section(config.config_ini_section)
     configuration["sqlalchemy.url"] = str(DB_URL)
     connectable = engine_from_config(
@@ -54,8 +58,11 @@ def run_migrations_offline() -> None:
     Run migrations in 'offline' mode.
     """
 
+    # Allow overriding DB url from environment (useful outside docker network)
+    DB_URL = os.getenv("DATABASE_URL", get_settings().sync_database_url)
+
     context.configure(
-        url=get_settings().sync_database_url,
+        url=str(DB_URL),
         target_metadata=target_metadata,
         literal_binds=True,
         compare_type=True,

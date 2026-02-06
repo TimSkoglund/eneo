@@ -122,9 +122,9 @@
           : undefined}
       ></ConversationView>
     </Page.Tab>
+
     <Page.Tab id="history">
       {#await data.initialHistory}
-        <!-- TODO: This has some delay on it as the underlying table is delayed in updating its rows, so we cover it up during that time. -->
         <div
           class="bg-primary absolute inset-0 z-[100] flex items-center justify-center"
           out:fade={{ delay: 250, duration: 100 }}
@@ -132,8 +132,12 @@
           <IconLoadingSpinner class="animate-spin"></IconLoadingSpinner>
         </div>
       {/await}
+
       <HistoryTable
         onConversationLoaded={(conversation) => {
+          // ✅ Minimal fix: switch active tab back to chat when selecting a history item
+          $currentTab = "chat";
+
           const tab = "chat";
           pushState(
             `/spaces/${$currentSpace.routeId}/chat/?${getChatQueryParams({ chatPartner: chat.partner, conversation, tab })}`,
@@ -144,6 +148,9 @@
           );
         }}
         onConversationDeleted={() => {
+          // Keep tab controller in sync when deleting from history
+          $currentTab = "history";
+
           const tab = "history";
           pushState(
             `/spaces/${$currentSpace.routeId}/chat/?${getChatQueryParams({ chatPartner: chat.partner, tab })}`,
