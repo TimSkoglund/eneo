@@ -39,14 +39,14 @@
     untrack(() => {
       // If on insights page go to chat page
       if ($currentTab === "insights" && !data.chatPartner.insight_enabled) {
-        $currentTab = "chat";
+        currentTab.set("chat");
         page.url.searchParams.set("tab", "chat");
         return;
       }
 
       // If opening default assistant always open chat
       if (data.chatPartner.type === "default-assistant") {
-        $currentTab = "chat";
+        currentTab.set("chat");
       }
     });
   });
@@ -91,8 +91,10 @@
       {#if chat.partner.type === "default-assistant"}
         <DefaultAssistantModelSwitcher></DefaultAssistantModelSwitcher>
       {:else if chat.partner.permissions?.includes("edit")}
-        <Button href={localizeHref(`/spaces/${$currentSpace.routeId}/${chat.partner.type}s/${chat.partner.id}/edit`)}
-          >{m.edit()}</Button
+        <Button
+          href={localizeHref(
+            `/spaces/${$currentSpace.routeId}/${chat.partner.type}s/${chat.partner.id}/edit`
+          )}>{m.edit()}</Button
         >
       {/if}
       <Button
@@ -100,8 +102,12 @@
         on:click={() => {
           chat.newConversation();
           const tab = "chat";
+          currentTab.set(tab); // ✅ keep tab controller in sync
           pushState(
-            `/spaces/${$currentSpace.routeId}/chat/?${getChatQueryParams({ chatPartner: chat.partner, tab })}`,
+            `/spaces/${$currentSpace.routeId}/chat/?${getChatQueryParams({
+              chatPartner: chat.partner,
+              tab
+            })}`,
             {
               conversation: undefined,
               tab
@@ -135,12 +141,14 @@
 
       <HistoryTable
         onConversationLoaded={(conversation) => {
-          // ✅ Minimal fix: switch active tab back to chat when selecting a history item
-          $currentTab = "chat";
-
           const tab = "chat";
+          currentTab.set(tab); // ✅ switch back to chat when selecting a history item
           pushState(
-            `/spaces/${$currentSpace.routeId}/chat/?${getChatQueryParams({ chatPartner: chat.partner, conversation, tab })}`,
+            `/spaces/${$currentSpace.routeId}/chat/?${getChatQueryParams({
+              chatPartner: chat.partner,
+              conversation,
+              tab
+            })}`,
             {
               conversation,
               tab
@@ -148,12 +156,13 @@
           );
         }}
         onConversationDeleted={() => {
-          // Keep tab controller in sync when deleting from history
-          $currentTab = "history";
-
           const tab = "history";
+          currentTab.set(tab); // ✅ keep tab controller in sync when deleting from history
           pushState(
-            `/spaces/${$currentSpace.routeId}/chat/?${getChatQueryParams({ chatPartner: chat.partner, tab })}`,
+            `/spaces/${$currentSpace.routeId}/chat/?${getChatQueryParams({
+              chatPartner: chat.partner,
+              tab
+            })}`,
             {
               conversation: undefined,
               tab
